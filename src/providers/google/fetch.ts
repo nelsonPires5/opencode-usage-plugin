@@ -1,4 +1,4 @@
-import type { ProviderResult, ProviderUsage, QuotaWindow } from '../../types.ts';
+import type { ProviderResult, ProviderUsage, UsageWindow } from '../../types.ts';
 import { calculateResetAfterSeconds, formatDuration, formatResetAt } from '../common/time.ts';
 import { getGoogleAuth } from './auth.ts';
 
@@ -26,7 +26,7 @@ interface TokenResponse {
   expires_in?: number;
 }
 
-interface ModelQuotaInfoResponse {
+interface ModelUsageInfoResponse {
   displayName?: string;
   quotaInfo?: {
     remainingFraction?: number;
@@ -35,7 +35,7 @@ interface ModelQuotaInfoResponse {
 }
 
 interface ModelsResponse {
-  models?: Record<string, ModelQuotaInfoResponse>;
+  models?: Record<string, ModelUsageInfoResponse>;
 }
 
 const refreshAccessToken = async (refreshToken: string): Promise<TokenResponse | null> => {
@@ -91,7 +91,7 @@ const fetchModels = async (
   return null;
 };
 
-const toWindow = (remainingFraction?: number, resetTime?: string): QuotaWindow => {
+const toWindow = (remainingFraction?: number, resetTime?: string): UsageWindow => {
   const remainingPercent =
     remainingFraction !== undefined ? Math.round(remainingFraction * 100) : null;
   const usedPercent = remainingPercent !== null ? Math.max(0, 100 - remainingPercent) : null;
@@ -110,7 +110,7 @@ const toWindow = (remainingFraction?: number, resetTime?: string): QuotaWindow =
 };
 
 const buildUsage = (data: ModelsResponse): ProviderUsage => {
-  const models: Record<string, { windows: Record<string, QuotaWindow> }> = {};
+  const models: Record<string, { windows: Record<string, UsageWindow> }> = {};
 
   for (const [modelName, modelData] of Object.entries(data.models ?? {})) {
     const window = toWindow(modelData.quotaInfo?.remainingFraction, modelData.quotaInfo?.resetTime);
@@ -146,7 +146,7 @@ const resolveAccessToken = async (
   return refreshed?.access_token ?? null;
 };
 
-export const fetchGoogleQuota = async (): Promise<ProviderResult> => {
+export const fetchGoogleUsage = async (): Promise<ProviderResult> => {
   const auth = await getGoogleAuth();
 
   if (!auth) {
