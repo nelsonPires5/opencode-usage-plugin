@@ -1,6 +1,6 @@
 import { expect } from 'vitest';
 
-import type { AntigravityAccountsFile, ProviderId, ProviderResult } from '../../types.ts';
+import type { AntigravityAccountsFile, ProviderId, ProviderResult } from '../../types/index.ts';
 
 export const mockOpenaiAuth = {
   access: 'mock-access-token',

@@ -1,4 +1,4 @@
-import type { ProviderAlias, ProviderId } from '../../types.ts';
+import type { ProviderAlias, ProviderId } from '../../types/index.ts';
 
 export const PROVIDER_ALIASES: Record<ProviderId, ProviderAlias[]> = {
   openai: ['openai', 'codex', 'chatgpt'],
