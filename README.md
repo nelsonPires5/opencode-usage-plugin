@@ -1,4 +1,4 @@
-# opencode-usage
+# opencode-usage-plugin
 
 OpenCode plugin that fetches subscription usage for OpenAI, Google, and z.ai.
 
@@ -16,7 +16,7 @@ Create or edit `~/.config/opencode/opencode.json`:
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-usage@0.0.1"]
+  "plugin": ["opencode-usage-plugin@0.0.1"]
 }
 ```
 
@@ -24,7 +24,7 @@ For local development, use a relative path:
 
 ```json
 {
-  "plugin": ["./path/to/opencode-usage"]
+  "plugin": ["./path/to/opencode-usage-plugin"]
 }
 ```
 
@@ -124,7 +124,7 @@ Nelson Pires <nelsonpires.sn@gmail.com>
 
 ## Repository
 
-https://github.com/nelsonPires5/opencode-usage
+https://github.com/nelsonPires5/opencode-usage-plugin
 
 ## License
 
