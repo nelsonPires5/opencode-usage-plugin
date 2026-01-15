@@ -1,5 +1,5 @@
 import type { ProviderResult, ProviderUsage, QuotaWindow } from '../../types.ts';
-import { calculateResetAfterSeconds } from '../common/time.ts';
+import { calculateResetAfterSeconds, formatDuration, formatResetAt } from '../common/time.ts';
 import { getGoogleAuth } from './auth.ts';
 
 const GOOGLE_CLIENT_ID =
@@ -96,13 +96,16 @@ const toWindow = (remainingFraction?: number, resetTime?: string): QuotaWindow =
     remainingFraction !== undefined ? Math.round(remainingFraction * 100) : null;
   const usedPercent = remainingPercent !== null ? Math.max(0, 100 - remainingPercent) : null;
   const resetAt = resetTime ? new Date(resetTime).getTime() : null;
+  const resetAfterSeconds = calculateResetAfterSeconds(resetAt);
 
   return {
     usedPercent,
     remainingPercent,
     windowSeconds: WINDOW_SECONDS,
-    resetAfterSeconds: calculateResetAfterSeconds(resetAt),
+    resetAfterSeconds,
     resetAt,
+    resetAtFormatted: resetAt ? formatResetAt(resetAt) : null,
+    resetAfterFormatted: resetAfterSeconds !== null ? formatDuration(resetAfterSeconds) : null,
   };
 };
 

@@ -1,5 +1,5 @@
 import type { ProviderResult, ProviderUsage, QuotaWindow } from '../../types.ts';
-import { calculateResetAfterSeconds } from '../common/time.ts';
+import { calculateResetAfterSeconds, formatDuration, formatResetAt } from '../common/time.ts';
 import { getOpenaiAuth } from './auth.ts';
 
 interface OpenaiBackendWindow {
@@ -26,13 +26,16 @@ const toWindow = (window?: OpenaiBackendWindow): QuotaWindow | null => {
 
   const usedPercent = window.used_percent;
   const resetAt = window.reset_at ? window.reset_at * 1000 : null;
+  const resetAfterSeconds = window.reset_after_seconds ?? calculateResetAfterSeconds(resetAt);
 
   return {
     usedPercent,
     remainingPercent: Math.max(0, 100 - usedPercent),
     windowSeconds: window.limit_window_seconds ?? null,
-    resetAfterSeconds: window.reset_after_seconds ?? calculateResetAfterSeconds(resetAt),
+    resetAfterSeconds,
     resetAt,
+    resetAtFormatted: resetAt ? formatResetAt(resetAt) : null,
+    resetAfterFormatted: resetAfterSeconds !== null ? formatDuration(resetAfterSeconds) : null,
   };
 };
 
