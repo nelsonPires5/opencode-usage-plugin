@@ -5,7 +5,7 @@ import { fetchGoogleUsage } from './providers/google/fetch.ts';
 import { fetchOpenaiUsage } from './providers/openai/fetch.ts';
 import { fetchZaiUsage } from './providers/zai-coding-plan/fetch.ts';
 import { PROVIDERS, type ProviderId, type ProviderResult } from './types/index.ts';
-import { formatUsageTable } from './table/format.js';
+import { formatUsageTable, formatTableString } from './table/format.js';
 import { formatUsageToast } from './toast/format.js';
 
 const fetchUsage = async (provider: ProviderId, logger: Logger): Promise<ProviderResult> => {
@@ -46,7 +46,7 @@ export const UsagePlugin: Plugin = async ({ client }) => {
 
   const usageTableTool = tool({
     description:
-      'Get subscription usage data for OpenAI, Google, and z.ai providers as JSON for table formatting',
+      'Get subscription usage data for OpenAI, Google, and z.ai providers as a formatted table',
     args: {},
     async execute() {
       await logger.info('Fetching usage for all providers');
@@ -55,7 +55,7 @@ export const UsagePlugin: Plugin = async ({ client }) => {
 
       const tableData = formatUsageTable(results);
 
-      return JSON.stringify(tableData);
+      return formatTableString(tableData);
     },
   });
 
@@ -73,16 +73,7 @@ export const UsagePlugin: Plugin = async ({ client }) => {
       };
 
       config.command.usage = {
-        template: `Call the usage_table tool and display results as a markdown table:
-
-| Provider | Used | Remaining | Status | Resets In |
-|----------|------|-----------|--------|-----------|
-
-Status indicators:
-- 🔴 Critical (remaining < 10%)
-- 🟡 Warning (remaining < 30%)
-- 🟢 OK (remaining >= 30%)
-- ⚪ N/A (not configured)`,
+        template: 'Call the usage_table tool and display the formatted table.',
         description: 'Show subscription usage as formatted table',
       };
     },
