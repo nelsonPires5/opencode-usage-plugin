@@ -78,6 +78,8 @@ describe('Zai Provider', () => {
       expect(result.usage?.windows['5h']?.usedPercent).toBe(30);
       expect(result.usage?.windows['5h']?.remainingPercent).toBe(70);
       expect(result.usage?.windows['5h']?.resetAt).toBe(1768452972346);
+      expect(result.usage?.windows['5h']?.resetAtFormatted).toBeDefined();
+      expect(result.usage?.windows['5h']?.resetAfterFormatted).toBeDefined();
     });
 
     it('ignores time limit entries', async () => {
@@ -113,6 +115,8 @@ describe('Zai Provider', () => {
       expect(result.usage?.windows['5h']?.usedPercent).toBe(20);
       expect(result.usage?.windows['5h']?.remainingPercent).toBe(80);
       expect(result.usage?.windows['5h']?.resetAt).toBe(1768452972346);
+      expect(result.usage?.windows['5h']?.resetAtFormatted).toBeDefined();
+      expect(result.usage?.windows['5h']?.resetAfterFormatted).toBeDefined();
     });
 
     it('handles invalid response gracefully', async () => {
@@ -145,6 +149,10 @@ describe('Zai Provider', () => {
       if (result.ok && result.usage?.windows) {
         const windowValues = Object.values(result.usage.windows);
         expect(windowValues.length).toBeGreaterThanOrEqual(0);
+        for (const window of windowValues) {
+          expect(window.resetAtFormatted).toBeDefined();
+          expect(window.resetAfterFormatted).toBeDefined();
+        }
       }
     });
   });
