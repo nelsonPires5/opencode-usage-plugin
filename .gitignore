@@ -11,3 +11,4 @@ coverage/
 .bun.lockb
 .memory/
 debug-*.ts
+.ignore
