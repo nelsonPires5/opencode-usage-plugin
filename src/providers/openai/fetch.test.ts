@@ -93,8 +93,16 @@ describe('OpenAI Provider', () => {
       if (result.usage) {
         expect(result.usage.windows['5h']?.usedPercent).toBe(32);
         expect(result.usage.windows['5h']?.resetAt).toBe(1768368727000);
+        expect(result.usage.windows['5h']?.resetAfterFormatted).toBe('1h 25m 37s');
+        expect(result.usage.windows['5h']?.resetAtFormatted).toMatch(
+          /Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/
+        );
         expect(result.usage.windows.weekly?.usedPercent).toBe(42);
         expect(result.usage.windows.weekly?.resetAt).toBe(1768447549000);
+        expect(result.usage.windows.weekly?.resetAfterFormatted).toBe('23h 19m 19s');
+        expect(result.usage.windows.weekly?.resetAtFormatted).toMatch(
+          /Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday/
+        );
       }
     });
 
@@ -136,6 +144,8 @@ describe('OpenAI Provider', () => {
         if (window) {
           expect(window.usedPercent).toBeGreaterThanOrEqual(0);
           expect(window.usedPercent).toBeLessThanOrEqual(100);
+          expect(window.resetAtFormatted).toBeDefined();
+          expect(window.resetAfterFormatted).toBeDefined();
         }
       }
     });

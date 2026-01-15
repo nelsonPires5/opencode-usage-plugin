@@ -91,6 +91,10 @@ describe('Google Provider', () => {
       expect(result.usage?.models).toBeDefined();
       expect(result.usage?.models?.['claude-3-opus'].windows['5h'].remainingPercent).toBe(75);
       expect(result.usage?.models?.['gemini-pro'].windows['5h'].remainingPercent).toBe(50);
+      expect(result.usage?.models?.['claude-3-opus'].windows['5h'].resetAtFormatted).toBeDefined();
+      expect(
+        result.usage?.models?.['claude-3-opus'].windows['5h'].resetAfterFormatted
+      ).toBeDefined();
     });
 
     it('handles empty models response', async () => {
@@ -128,6 +132,14 @@ describe('Google Provider', () => {
       const result = await fetchGoogleQuota();
       if (result.ok && result.usage) {
         expect(result.usage.windows).toBeInstanceOf(Object);
+        if (result.usage.models) {
+          for (const modelData of Object.values(result.usage.models)) {
+            for (const window of Object.values(modelData.windows)) {
+              expect(window.resetAtFormatted).toBeDefined();
+              expect(window.resetAfterFormatted).toBeDefined();
+            }
+          }
+        }
       }
     });
   });
