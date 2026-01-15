@@ -3,11 +3,6 @@ npm = "11.6.3"
 semver = "3.4.0"
 usage = "2.8.0"
 
-[env]
-_.path = [
-    "{{config_root}}/node_modules/.bin",
-]
-
 [tasks]
 build = "npm run build"
 lint = "npx eslint src/"
