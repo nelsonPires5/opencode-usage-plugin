@@ -1,4 +1,5 @@
 import type { ProviderResult, ProviderUsage, UsageWindow } from '../../types.ts';
+import { maskSecret, type Logger, noopLogger } from '../common/logger.ts';
 import { calculateResetAfterSeconds, formatDuration, formatResetAt } from '../common/time.ts';
 import { getZaiApiKey } from './auth.ts';
 
@@ -85,10 +86,11 @@ const toWindow = (limit?: ZaiLimit): UsageWindow | null => {
   };
 };
 
-export const fetchZaiUsage = async (): Promise<ProviderResult> => {
-  const apiKey = await getZaiApiKey();
+export const fetchZaiUsage = async (logger: Logger = noopLogger): Promise<ProviderResult> => {
+  const apiKey = await getZaiApiKey(logger);
 
   if (!apiKey) {
+    await logger.warn('No auth configured for zai-coding-plan');
     return {
       provider: 'zai-coding-plan',
       ok: false,
@@ -108,6 +110,9 @@ export const fetchZaiUsage = async (): Promise<ProviderResult> => {
     });
 
     if (!response.ok) {
+      await logger.error(`API error ${response.status} for zai-coding-plan`, {
+        token: maskSecret(apiKey),
+      });
       return {
         provider: 'zai-coding-plan',
         ok: false,
@@ -132,6 +137,8 @@ export const fetchZaiUsage = async (): Promise<ProviderResult> => {
       windows,
     };
 
+    await logger.info('zai-coding-plan usage fetched successfully');
+
     return {
       provider: 'zai-coding-plan',
       ok: true,
@@ -140,6 +147,7 @@ export const fetchZaiUsage = async (): Promise<ProviderResult> => {
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    await logger.error(`Request failed for zai-coding-plan: ${message}`);
     return {
       provider: 'zai-coding-plan',
       ok: false,
