@@ -1,5 +1,5 @@
 {
-  "name": "opencode-usage",
+  "name": "opencode-usage-plugin",
   "version": "0.0.1-dev",
   "description": "OpenCode plugin to display subscription usages for OpenAI, Google, and z.ai",
   "author": {
@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nelsonPires5/opencode-usage.git"
+    "url": "git+https://github.com/nelsonPires5/opencode-usage-plugin.git"
   },
   "keywords": [
     "opencode",
