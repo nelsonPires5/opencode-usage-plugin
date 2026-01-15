@@ -36,6 +36,16 @@ legacy inputs.
 - **z.ai**: `~/.local/share/opencode/auth.json` (`zai-coding-plan`, aliases `zai`, `z.ai`) or
   `ZAI_API_KEY`
 
+## Release Lifecycle
+
+Agents should follow this lifecycle for releasing new versions:
+
+1.  **Start Dev Cycle**: `mise run bump patch --dev` (0.0.1 -> 0.0.2-dev)
+2.  **Iterate**: `mise run bump prerelease` (0.0.2-dev -> 0.0.2-dev1)
+3.  **Finalize**: `mise run bump release` (0.0.2-dev1 -> 0.0.2)
+
+Refer to `RELEASE.md` for more details.
+
 ## Code Style Guidelines
 
 ### Imports & Module System

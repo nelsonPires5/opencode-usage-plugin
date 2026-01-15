@@ -11,15 +11,23 @@ This project uses tag-based releases with automated npm publishing via OIDC.
 
 ```bash
 mise run bump patch --dev
-# Example: 0.0.2-dev -> 0.0.3-dev
+# Example: 0.0.1 -> 0.0.2-dev
+# Publishes to npm with tag: next
+```
+
+### Iterate on Dev Version
+
+```bash
+mise run bump prerelease
+# Example: 0.0.2-dev -> 0.0.2-dev1
 # Publishes to npm with tag: next
 ```
 
 ### Release a Stable Version
 
 ```bash
-mise run bump patch
-# Example: 0.0.2-dev -> 0.0.3
+mise run bump release
+# Example: 0.0.2-dev1 -> 0.0.2
 # Publishes to npm with tag: latest
 ```
 
@@ -35,12 +43,25 @@ mise run bump <level> [--dev]
 
 ### Arguments
 
-| Argument | Description                         |
-| -------- | ----------------------------------- |
-| `patch`  | Bump patch version (0.0.2 -> 0.0.3) |
-| `minor`  | Bump minor version (0.0.2 -> 0.1.0) |
-| `major`  | Bump major version (0.0.2 -> 1.0.0) |
-| `--dev`  | Append `-dev` suffix for prerelease |
+| Argument     | Description                                                      |
+| ------------ | ---------------------------------------------------------------- |
+| `patch`      | Bump patch version (0.0.2 -> 0.0.3)                              |
+| `minor`      | Bump minor version (0.0.2 -> 0.1.0)                              |
+| `major`      | Bump major version (0.0.2 -> 1.0.0)                              |
+| `prerelease` | Bump prerelease version (0.0.2-dev -> 0.0.2-dev1)                |
+| `release`    | Finalize version (0.0.2-dev1 -> 0.0.2)                           |
+| `--dev`      | Append `-dev` suffix for prerelease (only for patch/minor/major) |
+
+### Prerelease Lifecycle
+
+This workflow allows you to release development versions, iterate on them, and then finalize the release.
+
+| Command                     | Starting Version | New Version  | npm Tag  |
+| :-------------------------- | :--------------- | :----------- | :------- |
+| `mise run bump patch --dev` | `0.0.1`          | `0.0.2-dev`  | `next`   |
+| `mise run bump prerelease`  | `0.0.2-dev`      | `0.0.2-dev1` | `next`   |
+| `mise run bump prerelease`  | `0.0.2-dev1`     | `0.0.2-dev2` | `next`   |
+| `mise run bump release`     | `0.0.2-dev2`     | `0.0.2`      | `latest` |
 
 ### Examples
 
@@ -61,7 +82,7 @@ mise run bump minor --dev     # 0.0.2 -> 0.1.0-dev
 
 ### What the Bump Command Does
 
-1. Validates the version level (patch/minor/major)
+1. Validates the version level (patch/minor/major/prerelease/release)
 2. Calculates the new version using `semver`
 3. Updates `package.json` with the new version
 4. Commits the change: `chore: bump version to X.Y.Z`

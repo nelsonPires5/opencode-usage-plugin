@@ -19,10 +19,10 @@ usage = 'flag "--tag <tag>" default="latest"'
 run = "npm publish --provenance --access public --tag ${usage_tag}"
 
 [tasks.bump]
-description = "Bump version, commit, tag and push. Usage: mise run bump -- patch|minor|major [-dev]"
+description = "Bump version, commit, tag and push. Usage: mise run bump -- patch|minor|major|prerelease|release [-dev]"
 usage = '''
-arg "<level>" help="Version level: patch, minor, or major"
-flag "-d --dev" help="Append -dev suffix for prerelease"
+arg "<level>" help="Version level: patch, minor, major, prerelease, release"
+flag "-d --dev" help="Append -dev suffix for prerelease (only for patch/minor/major)"
 '''
 run = '''
 #!/usr/bin/env bash
@@ -31,25 +31,28 @@ set -e
 LEVEL="${usage_level}"
 DEV_FLAG="${usage_dev}"
 
-# Validate level
-if [[ ! "$LEVEL" =~ ^(patch|minor|major)$ ]]; then
-  echo "Error: level must be patch, minor, or major"
-  exit 1
-fi
-
 # Get current version
 CURRENT=$(node -p "require('./package.json').version")
 echo "Current version: $CURRENT"
 
-# Strip any existing prerelease suffix for semver calculation
-BASE_VERSION=$(echo "$CURRENT" | sed 's/-.*$//')
+if [[ "$LEVEL" == "release" ]]; then
+  NEW_VERSION=$(semver bump release "$CURRENT")
+elif [[ "$LEVEL" == "prerelease" ]]; then
+  NEW_VERSION=$(semver bump prerelease dev. "$CURRENT")
+elif [[ "$LEVEL" =~ ^(patch|minor|major)$ ]]; then
+  # Strip any existing prerelease suffix for semver calculation base
+  BASE_VERSION=$(echo "$CURRENT" | sed 's/-.*$//')
+  
+  # Calculate new version
+  NEW_VERSION=$(semver bump "$LEVEL" "$BASE_VERSION")
 
-# Calculate new version
-NEW_VERSION=$(semver bump "$LEVEL" "$BASE_VERSION")
-
-# Add -dev suffix if requested
-if [[ "$DEV_FLAG" == "true" ]]; then
-  NEW_VERSION="${NEW_VERSION}-dev"
+  # Add -dev suffix if requested
+  if [[ "$DEV_FLAG" == "true" ]]; then
+    NEW_VERSION="${NEW_VERSION}-dev"
+  fi
+else
+  echo "Error: level must be patch, minor, major, prerelease, or release"
+  exit 1
 fi
 
 echo "New version: $NEW_VERSION"
