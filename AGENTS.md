@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repo is an OpenCode plugin that fetches quota usage from multiple providers and returns
+This repo is an OpenCode plugin that fetches usage from multiple providers and returns
 normalized window data. Provider IDs follow models.dev naming and aliases are supported for
 legacy inputs.
 
@@ -10,11 +10,11 @@ legacy inputs.
 
 - **Provider IDs**: Use models.dev IDs only in code (`openai`, `google`, `zai-coding-plan`).
   - Aliases are accepted via `src/providers/common/registry.ts`.
-- **Output**: The `quotas` tool returns a JSON string containing an array of provider results.
-  Formatting is handled by `src/command/quotas.md`.
+- **Output**: The `usage` tool returns a JSON string containing an array of provider results.
+  Formatting is handled by `src/command/usage.md`.
 - **Normalized Usage**: Providers emit `ProviderResult` with `usage.windows` (global windows) and
-  optional `usage.models[model].windows` for per-model quotas.
-- **Window Fields**: `QuotaWindow` includes `usedPercent`, `remainingPercent`, `windowSeconds`,
+  optional `usage.models[model].windows` for per-model usage.
+- **Window Fields**: `UsageWindow` includes `usedPercent`, `remainingPercent`, `windowSeconds`,
   `resetAt`, `resetAfterSeconds`.
 - **Auth**: Provider-specific auth lives with the provider in `src/providers/<provider>/auth.ts`.
   Shared auth utilities and paths live in `src/providers/common/files.ts`.
@@ -25,7 +25,7 @@ legacy inputs.
 - `src/types.ts`: Shared types and normalized schema
 - `src/providers/common/`: Shared helpers (auth file IO, provider registry, time helpers)
 - `src/providers/<provider>/`: Provider-specific auth, fetcher, and tests
-- `src/command/quotas.md`: Command template for formatting output
+- `src/command/usage.md`: Command template for formatting output
 
 ## Provider Auth Sources
 
@@ -111,8 +111,8 @@ describe('Provider Name', () => {
   });
 
   describe.skipIf(!isRealAuthEnabled('provider'))('with real auth', () => {
-    it('fetches quota successfully');
-    it('returns valid quota data');
+    it('fetches usage successfully');
+    it('returns valid usage data');
   });
 });
 ```
@@ -136,7 +136,7 @@ REAL_ZAI_AUTH=0
 
 ```typescript
 import { beforeEach, describe, it, vi } from 'vitest';
-import { fetchProviderQuota } from './fetch.ts';
+import { fetchProviderUsage } from './fetch.ts';
 import * as auth from './auth.ts';
 
 vi.mock('./auth.ts', () => ({
@@ -156,7 +156,7 @@ global.fetch = mockFetch;
 3. Add provider ID to `PROVIDERS` in `src/types.ts`.
 4. Add provider tests in `src/providers/<provider>/fetch.test.ts`.
 5. Add `REAL_<PROVIDER>_AUTH=0` to `.env.test`.
-6. Use `ProviderResult` and `QuotaWindow` to normalize output.
+6. Use `ProviderResult` and `UsageWindow` to normalize output.
 
 ## Memory
 
@@ -166,4 +166,4 @@ global.fetch = mockFetch;
 
 - **Type**: ES Module package for OpenCode plugin system
 - **Target**: Bun runtime, ES2021+
-- **Purpose**: Fetch and normalize subscription quota windows across providers
+- **Purpose**: Fetch and normalize subscription usage windows across providers
