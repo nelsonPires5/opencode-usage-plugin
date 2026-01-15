@@ -1,4 +1,5 @@
 import type { ProviderResult, ProviderUsage, UsageWindow } from '../../types.ts';
+import { maskSecret, type Logger, noopLogger } from '../common/logger.ts';
 import { calculateResetAfterSeconds, formatDuration, formatResetAt } from '../common/time.ts';
 import { getGoogleAuth } from './auth.ts';
 
@@ -38,7 +39,10 @@ interface ModelsResponse {
   models?: Record<string, ModelUsageInfoResponse>;
 }
 
-const refreshAccessToken = async (refreshToken: string): Promise<TokenResponse | null> => {
+const refreshAccessToken = async (
+  refreshToken: string,
+  logger: Logger
+): Promise<TokenResponse | null> => {
   try {
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -52,18 +56,25 @@ const refreshAccessToken = async (refreshToken: string): Promise<TokenResponse |
     });
 
     if (!response.ok) {
+      await logger.warn('Failed to refresh OAuth token for google', {
+        status: response.status,
+        token: maskSecret(refreshToken),
+      });
       return null;
     }
 
     return (await response.json()) as TokenResponse;
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await logger.warn(`Token refresh failed for google: ${message}`);
     return null;
   }
 };
 
 const fetchModels = async (
   accessToken: string,
-  projectId?: string
+  projectId: string | undefined,
+  logger: Logger
 ): Promise<ModelsResponse | null> => {
   const body = projectId ? { project: projectId } : {};
 
@@ -81,6 +92,7 @@ const fetchModels = async (
       });
 
       if (response.ok) {
+        await logger.debug(`Fetched models from ${endpoint}`, { projectId });
         return (await response.json()) as ModelsResponse;
       }
     } catch {
@@ -88,6 +100,7 @@ const fetchModels = async (
     }
   }
 
+  await logger.error('Failed to fetch models from all google endpoints', { projectId });
   return null;
 };
 
@@ -128,9 +141,10 @@ const buildUsage = (data: ModelsResponse): ProviderUsage => {
 };
 
 const resolveAccessToken = async (
-  refreshToken?: string,
-  accessToken?: string,
-  expires?: number
+  refreshToken: string | undefined,
+  accessToken: string | undefined,
+  expires: number | undefined,
+  logger: Logger
 ): Promise<string | null> => {
   const now = Date.now();
 
@@ -142,14 +156,15 @@ const resolveAccessToken = async (
     return null;
   }
 
-  const refreshed = await refreshAccessToken(refreshToken);
+  const refreshed = await refreshAccessToken(refreshToken, logger);
   return refreshed?.access_token ?? null;
 };
 
-export const fetchGoogleUsage = async (): Promise<ProviderResult> => {
-  const auth = await getGoogleAuth();
+export const fetchGoogleUsage = async (logger: Logger = noopLogger): Promise<ProviderResult> => {
+  const auth = await getGoogleAuth(logger);
 
   if (!auth) {
+    await logger.warn('No auth configured for google');
     return {
       provider: 'google',
       ok: false,
@@ -159,9 +174,15 @@ export const fetchGoogleUsage = async (): Promise<ProviderResult> => {
     };
   }
 
-  const accessToken = await resolveAccessToken(auth.refreshToken, auth.accessToken, auth.expires);
+  const accessToken = await resolveAccessToken(
+    auth.refreshToken,
+    auth.accessToken,
+    auth.expires,
+    logger
+  );
 
   if (!accessToken) {
+    await logger.warn('Failed to refresh OAuth token for google', { email: auth.email });
     return {
       provider: 'google',
       ok: false,
@@ -172,9 +193,10 @@ export const fetchGoogleUsage = async (): Promise<ProviderResult> => {
   }
 
   const projectId = auth.projectId ?? DEFAULT_PROJECT_ID;
-  const modelsData = await fetchModels(accessToken, projectId);
+  const modelsData = await fetchModels(accessToken, projectId, logger);
 
   if (!modelsData) {
+    await logger.error('Failed to fetch models from google API', { projectId });
     return {
       provider: 'google',
       ok: false,
@@ -183,6 +205,8 @@ export const fetchGoogleUsage = async (): Promise<ProviderResult> => {
       usage: null,
     };
   }
+
+  await logger.info('google usage fetched successfully');
 
   return {
     provider: 'google',
