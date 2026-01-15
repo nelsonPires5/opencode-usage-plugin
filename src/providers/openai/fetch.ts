@@ -1,4 +1,4 @@
-import type { ProviderResult, ProviderUsage, QuotaWindow } from '../../types.ts';
+import type { ProviderResult, ProviderUsage, UsageWindow } from '../../types.ts';
 import { calculateResetAfterSeconds, formatDuration, formatResetAt } from '../common/time.ts';
 import { getOpenaiAuth } from './auth.ts';
 
@@ -19,7 +19,7 @@ interface OpenaiBackendResponse {
   };
 }
 
-const toWindow = (window?: OpenaiBackendWindow): QuotaWindow | null => {
+const toWindow = (window?: OpenaiBackendWindow): UsageWindow | null => {
   if (!window) {
     return null;
   }
@@ -39,7 +39,7 @@ const toWindow = (window?: OpenaiBackendWindow): QuotaWindow | null => {
   };
 };
 
-export const fetchOpenaiQuota = async (): Promise<ProviderResult> => {
+export const fetchOpenaiUsage = async (): Promise<ProviderResult> => {
   const auth = await getOpenaiAuth();
 
   if (!auth) {
@@ -86,7 +86,7 @@ export const fetchOpenaiQuota = async (): Promise<ProviderResult> => {
     const primary = toWindow(payload.rate_limit.primary_window);
     const secondary = toWindow(payload.rate_limit.secondary_window);
 
-    const windows: Record<string, QuotaWindow> = {};
+    const windows: Record<string, UsageWindow> = {};
     if (primary) {
       windows['5h'] = primary;
     }
