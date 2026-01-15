@@ -1,4 +1,4 @@
-import type { ProviderResult, ProviderUsage, QuotaWindow } from '../../types.ts';
+import type { ProviderResult, ProviderUsage, UsageWindow } from '../../types.ts';
 import { calculateResetAfterSeconds, formatDuration, formatResetAt } from '../common/time.ts';
 import { getZaiApiKey } from './auth.ts';
 
@@ -13,7 +13,7 @@ interface ZaiLimit {
   nextResetTime?: number;
 }
 
-interface ZaiQuotaResponse {
+interface ZaiUsageResponse {
   code: number;
   msg: string;
   data?: {
@@ -64,7 +64,7 @@ const resolveWindowLabel = (windowSeconds: number | null): string => {
   return `${windowSeconds}s`;
 };
 
-const toWindow = (limit?: ZaiLimit): QuotaWindow | null => {
+const toWindow = (limit?: ZaiLimit): UsageWindow | null => {
   if (!limit) {
     return null;
   }
@@ -85,7 +85,7 @@ const toWindow = (limit?: ZaiLimit): QuotaWindow | null => {
   };
 };
 
-export const fetchZaiQuota = async (): Promise<ProviderResult> => {
+export const fetchZaiUsage = async (): Promise<ProviderResult> => {
   const apiKey = await getZaiApiKey();
 
   if (!apiKey) {
@@ -117,11 +117,11 @@ export const fetchZaiQuota = async (): Promise<ProviderResult> => {
       };
     }
 
-    const payload = (await response.json()) as ZaiQuotaResponse;
+    const payload = (await response.json()) as ZaiUsageResponse;
     const limits = payload.data?.limits ?? [];
     const tokensLimit = limits.find((limit) => limit.type === 'TOKENS_LIMIT');
 
-    const windows: Record<string, QuotaWindow> = {};
+    const windows: Record<string, UsageWindow> = {};
     const window = toWindow(tokensLimit);
     if (window) {
       const label = resolveWindowLabel(window.windowSeconds);
