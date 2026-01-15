@@ -77,10 +77,10 @@ legacy inputs.
 
 ## Build & Test Commands
 
-- **Build**: `mise run build` or `bun build ./src/index.ts --outdir dist --target bun`
-- **Test**: `bun test` (runs all tests, mocks only by default)
-- **Single Test**: `bun test src/providers/<provider>/fetch.test.ts`
-- **Watch Mode**: `bun test --watch`
+- **Build**: `npm run build` or `mise run build`
+- **Test**: `npm test` (runs all tests, mocks only by default)
+- **Single Test**: `npm test -- src/providers/<provider>/fetch.test.ts`
+- **Watch Mode**: `npm run test:watch`
 - **Lint**: `npx eslint src/` or `mise run lint` (eslint)
 - **Fix Lint**: `mise run lint:fix` (eslint --fix)
 - **Format**: `mise run format` (prettier)
@@ -160,5 +160,5 @@ global.fetch = mockFetch;
 ## Project Context
 
 - **Type**: ES Module package for OpenCode plugin system
-- **Target**: Bun runtime, ES2021+
+- **Target**: Node.js runtime, ES2021+
 - **Purpose**: Fetch and normalize subscription usage windows across providers

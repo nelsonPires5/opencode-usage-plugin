@@ -65,9 +65,9 @@ For local development, use a relative path:
 ## Development
 
 ```bash
-bun install
+npm install
 mise run build
-bun run test
+npm test
 mise run lint
 ```
 
@@ -78,7 +78,7 @@ Tests use **vitest** with a provider-specific auth configuration system.
 **Run all tests** (mocks only, default):
 
 ```bash
-bun run test
+npm test
 ```
 
 **Run tests with real auth**:
@@ -88,15 +88,15 @@ bun run test
 TEST_REAL_OPENAI_AUTH=1
 TEST_REAL_GOOGLE_AUTH=1
 TEST_REAL_ZAI_CODING_PLAN_AUTH=1
-bun run test
+npm test
 ```
 
 **Run specific provider tests**:
 
 ```bash
-bun test src/providers/openai/fetch.test.ts
-bun test src/providers/google/fetch.test.ts
-bun test src/providers/zai-coding-plan/fetch.test.ts
+npm test -- src/providers/openai/fetch.test.ts
+npm test -- src/providers/google/fetch.test.ts
+npm test -- src/providers/zai-coding-plan/fetch.test.ts
 ```
 
 **Test structure**:

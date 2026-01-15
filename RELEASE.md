@@ -158,10 +158,6 @@ This means the version already exists on npm. Bump to a new version:
 mise run bump patch --dev
 ```
 
-### Build fails with "Cannot find type definition file for 'bun-types'"
-
-The CI now runs `npm ci` before build to install dev dependencies. If this still fails, ensure `bun-types` is in `devDependencies`.
-
 ### OIDC authentication fails
 
 1. Verify trusted publisher is configured on npmjs.com

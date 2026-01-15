@@ -1,5 +1,7 @@
 import type { Plugin } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin';
+import { fileURLToPath } from 'node:url';
+import { readdir, readFile } from 'node:fs/promises';
 import path from 'path';
 
 import { fetchGoogleUsage } from './providers/google/fetch.ts';
@@ -49,17 +51,29 @@ const parseFrontmatter = (content: string): { frontmatter: CommandFrontmatter; b
 
 const loadCommands = async (): Promise<ParsedCommand[]> => {
   const commands: ParsedCommand[] = [];
-  const commandDir = path.join(import.meta.dir, 'command');
-  const glob = new Bun.Glob('**/*.md');
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const commandDir = path.join(__dirname, 'command');
 
-  for await (const file of glob.scan({ cwd: commandDir, absolute: true })) {
-    const content = await Bun.file(file).text();
-    const { frontmatter, body } = parseFrontmatter(content);
-    const relativePath = path.relative(commandDir, file);
-    const name = relativePath.replace(/\.md$/, '').replace(/\//g, '-');
-    commands.push({ name, frontmatter, template: body });
-  }
+  const walkDir = async (dir: string, baseDir: string = dir): Promise<void> => {
+    const entries = await readdir(dir, { withFileTypes: true });
 
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+
+      if (entry.isDirectory()) {
+        await walkDir(fullPath, baseDir);
+      } else if (entry.name.endsWith('.md')) {
+        const content = await readFile(fullPath, 'utf-8');
+        const { frontmatter, body } = parseFrontmatter(content);
+        const relativePath = path.relative(baseDir, fullPath);
+        const name = relativePath.replace(/\.md$/, '').replace(/\//g, '-');
+        commands.push({ name, frontmatter, template: body });
+      }
+    }
+  };
+
+  await walkDir(commandDir);
   return commands;
 };
 
