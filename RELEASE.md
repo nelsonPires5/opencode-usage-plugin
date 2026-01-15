@@ -108,8 +108,8 @@ mise run bump patch --dev
 
 | Version Pattern                       | npm Tag  | Install Command                   |
 | ------------------------------------- | -------- | --------------------------------- |
-| `1.0.0` (stable)                      | `latest` | `npm install opencode-quota`      |
-| `1.0.0-dev`, `-alpha`, `-beta`, `-rc` | `next`   | `npm install opencode-quota@next` |
+| `1.0.0` (stable)                      | `latest` | `npm install opencode-usage`      |
+| `1.0.0-dev`, `-alpha`, `-beta`, `-rc` | `next`   | `npm install opencode-usage@next` |
 
 ## NPM Trusted Publishing
 
