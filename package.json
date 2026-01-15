@@ -35,11 +35,10 @@
   "files": [
     "dist/index.js",
     "dist/index.js.map",
-    "dist/index.d.ts",
-    "dist/command"
+    "dist/index.d.ts"
   ],
   "scripts": {
-    "build": "npx esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --external:@opencode-ai/plugin --external:path --external:@types/node --sourcemap && npx tsc --emitDeclarationOnly && cp -r src/command dist/",
+    "build": "npx esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --external:@opencode-ai/plugin --external:path --external:@types/node --sourcemap && npx tsc --emitDeclarationOnly",
     "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest"
