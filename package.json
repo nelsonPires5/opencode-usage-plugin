@@ -1,0 +1,63 @@
+{
+  "name": "opencode-quota",
+  "version": "0.0.3-dev",
+  "description": "OpenCode plugin to display subscription quotas for OpenAI, Google, and z.ai",
+  "author": {
+    "name": "Nelson Pires",
+    "email": "nelsonpires.sn@gmail.com"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nelsonPires5/opencode-quota.git"
+  },
+  "keywords": [
+    "opencode",
+    "plugin",
+    "quota",
+    "chatgpt",
+    "codex",
+    "antigravity",
+    "zai",
+    "usage",
+    "monitoring"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist/index.js",
+    "dist/index.js.map",
+    "dist/index.d.ts",
+    "dist/command"
+  ],
+  "scripts": {
+    "build": "npx esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --external:@opencode-ai/plugin --external:path --external:@types/node --sourcemap && npx tsc --emitDeclarationOnly && cp -r src/command dist/",
+    "prepublishOnly": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "1.0.85"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^20.11.5",
+    "@typescript-eslint/eslint-plugin": "8.47.0",
+    "@typescript-eslint/parser": "8.47.0",
+    "bun-types": "latest",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-prettier": "^5.1.3",
+    "prettier": "^3.2.4",
+    "typescript-eslint": "^8.47.0",
+    "vitest": "^3.2.4"
+  }
+}
