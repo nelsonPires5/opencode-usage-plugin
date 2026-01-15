@@ -7,7 +7,7 @@ on:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 jobs:
   publish:
@@ -33,9 +33,37 @@ jobs:
           VERSION="${{ github.ref_name }}"
           if [[ "$VERSION" =~ -dev|-alpha|-beta|-rc ]]; then
             TAG="next"
+            PRERELEASE_FLAG="--prerelease"
           else
             TAG="latest"
+            PRERELEASE_FLAG=""
           fi
 
           echo "Publishing version $VERSION with tag: $TAG"
           mise run publish --tag "$TAG"
+          echo "prerelease=$PRERELEASE_FLAG" >> $GITHUB_OUTPUT
+        id: publish
+
+      - name: Extract changelog notes
+        id: changelog
+        run: |
+          VERSION="${{ github.ref_name }}"
+          NOTES=$(awk '/^## v'"${VERSION#v}"'/{found=1;next} /^## /{found=0} found' CHANGELOG.md | sed '/^$/d')
+
+          if [ -z "$NOTES" ]; then
+            NOTES="Release $VERSION"
+          fi
+
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ github.ref_name }}"
+          gh release create "$VERSION" \
+            --title "$VERSION" \
+            --notes "${{ steps.changelog.outputs.notes }}" \
+            ${{ steps.publish.outputs.prerelease }}
