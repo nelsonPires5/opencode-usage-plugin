@@ -1,6 +1,6 @@
 {
   "name": "opencode-usage-plugin",
-  "version": "0.0.1-dev",
+  "version": "0.0.1",
   "description": "OpenCode plugin to display subscription usages for OpenAI, Google, and z.ai",
   "author": {
     "name": "Nelson Pires",
