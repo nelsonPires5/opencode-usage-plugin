@@ -1,4 +1,4 @@
-import type { ProviderResult, ProviderUsage, UsageWindow } from '../../types.ts';
+import type { ProviderResult, ProviderUsage, UsageWindow } from '../../types/index.ts';
 import { maskSecret, type Logger, noopLogger } from '../common/logger.ts';
 import { calculateResetAfterSeconds, formatDuration, formatResetAt } from '../common/time.ts';
 import { getZaiApiKey } from './auth.ts';
