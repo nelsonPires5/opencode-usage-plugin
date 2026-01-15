@@ -3,7 +3,7 @@ import type {
   AntigravityAccountsFile,
   OpenCodeAuth,
   ProviderAuthData,
-} from '../../types.ts';
+} from '../../types/index.ts';
 import type { Logger } from '../common/logger.ts';
 import { AUTH_PATHS, loadOpenCodeAuth, readJson } from '../common/files.ts';
 import { getProviderAliases } from '../common/registry.ts';
