@@ -1,5 +1,6 @@
 import type { ProviderResult, ProviderUsage } from '../types/index.js';
 import type { ToastUsageResult } from '../types/toast.js';
+import type { Logger } from '../providers/common/logger.js';
 import { filterFlagshipModels } from './filter.js';
 
 const formatProviderLine = (provider: string, usage: ProviderUsage | null): string => {
@@ -39,10 +40,18 @@ const formatProviderLine = (provider: string, usage: ProviderUsage | null): stri
   return `${provider}: No usage data`;
 };
 
-export const formatUsageToast = (results: ProviderResult[]): ToastUsageResult => {
+export const formatUsageToast = async (
+  results: ProviderResult[],
+  logger?: Logger
+): Promise<ToastUsageResult> => {
   const lines: string[] = [];
 
   for (const result of results) {
+    if (!result.usage) {
+      await logger?.debug(`Provider ${result.provider} not configured, skipping`);
+      continue;
+    }
+
     let usage = result.usage;
 
     if (result.provider === 'google' && usage?.models) {
@@ -54,6 +63,14 @@ export const formatUsageToast = (results: ProviderResult[]): ToastUsageResult =>
 
     const line = formatProviderLine(result.provider, usage);
     lines.push(line);
+  }
+
+  if (lines.length === 0) {
+    return {
+      title: 'Usage',
+      message: 'No providers configured',
+      variant: 'info',
+    };
   }
 
   return {

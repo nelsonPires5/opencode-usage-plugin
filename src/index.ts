@@ -29,7 +29,7 @@ export const UsagePlugin: Plugin = async ({ client }) => {
 
       const results = await Promise.all(PROVIDERS.map((provider) => fetchUsage(provider, logger)));
 
-      const toast = formatUsageToast(results);
+      const toast = await formatUsageToast(results, logger);
 
       await client.tui.showToast({
         body: {
