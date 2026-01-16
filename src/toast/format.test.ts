@@ -35,16 +35,18 @@ describe('toast/format', () => {
   it('formats toast message with usage data', async () => {
     const result = await formatUsageToast(mockCache, noopLogger);
 
-    expect(result.message).toContain('openai: 50% used • resets in 2h 30m');
-    expect(result.message).toContain('Updated at: 2024-01-01T00:00:00.000Z');
+    expect(result.title).toBe('📊 Usage');
+    expect(result.message).toContain('🟢 openai     50% • 2h 30m');
+    expect(result.message).toContain('Updated: 2024-01-01T00:00:00.000Z');
+    expect(result.message).toContain('─────────────────────');
   });
 
-  it('prepends stale warning when cache is stale', async () => {
+  it('appends stale warning to footer when cache is stale', async () => {
     const staleCache = { ...mockCache, isStale: true };
     const result = await formatUsageToast(staleCache, noopLogger);
 
-    expect(result.message).toContain('⚠ STALE CACHE');
-    expect(result.message).toContain('openai: 50% used');
+    expect(result.message).toContain('Updated: 2024-01-01T00:00:00.000Z (stale)');
+    expect(result.message).toContain('🟢 openai     50% • 2h 30m');
   });
 
   it('shows error line when some providers failed', async () => {
@@ -62,8 +64,8 @@ describe('toast/format', () => {
 
     const result = await formatUsageToast(errorCache, noopLogger);
 
-    expect(result.message).toContain('Some providers failed');
-    expect(result.message).toContain('openai: 50% used');
+    expect(result.message).toContain('⚠️ Some providers failed');
+    expect(result.message).toContain('🟢 openai     50% • 2h 30m');
   });
 
   it('handles empty/no providers', async () => {
