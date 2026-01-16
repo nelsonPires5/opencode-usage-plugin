@@ -1,6 +1,7 @@
 import type { ProviderResult, ProviderUsage } from '../types/index.js';
 import type { ToastUsageResult } from '../types/toast.js';
 import type { Logger } from '../providers/common/logger.js';
+import type { DisplayCache } from '../cache/reader.js';
 import { filterFlagshipModels } from './filter.js';
 
 const formatProviderLine = (provider: string, usage: ProviderUsage | null): string => {
@@ -41,31 +42,10 @@ const formatProviderLine = (provider: string, usage: ProviderUsage | null): stri
 };
 
 export const formatUsageToast = async (
-  results: ProviderResult[],
+  input: ProviderResult[] | DisplayCache | null,
   logger?: Logger
 ): Promise<ToastUsageResult> => {
-  const lines: string[] = [];
-
-  for (const result of results) {
-    if (!result.usage) {
-      await logger?.debug(`Provider ${result.provider} not configured, skipping`);
-      continue;
-    }
-
-    let usage = result.usage;
-
-    if (result.provider === 'google' && usage?.models) {
-      usage = {
-        ...usage,
-        models: filterFlagshipModels(usage.models),
-      };
-    }
-
-    const line = formatProviderLine(result.provider, usage);
-    lines.push(line);
-  }
-
-  if (lines.length === 0) {
+  if (!input) {
     return {
       title: 'Usage',
       message: 'No providers configured',
@@ -73,9 +53,95 @@ export const formatUsageToast = async (
     };
   }
 
+  const displayCache = 'providers' in input ? input : null;
+  const results = 'providers' in input ? null : input;
+
+  const lines: string[] = [];
+
+  if (displayCache) {
+    for (const [providerId, entry] of Object.entries(displayCache.providers)) {
+      if (!entry.data) {
+        continue;
+      }
+
+      let usage = entry.data;
+
+      if (providerId === 'google' && usage?.models) {
+        usage = {
+          ...usage,
+          models: filterFlagshipModels(usage.models),
+        };
+      }
+
+      const line = formatProviderLine(providerId, usage);
+      lines.push(line);
+    }
+
+    const hasErrors = Object.values(displayCache.providers).some((e) => e.error !== null);
+
+    if (hasErrors) {
+      lines.push('Some providers failed');
+    }
+
+    if (displayCache.isStale) {
+      lines.unshift('⚠ STALE CACHE');
+    }
+
+    lines.push(`Updated at: ${displayCache.updatedAt}`);
+
+    if (lines.length === 1) {
+      return {
+        title: 'Usage',
+        message: 'No providers configured',
+        variant: 'info',
+      };
+    }
+
+    return {
+      title: 'Usage',
+      message: lines.join('\n'),
+      variant: 'info',
+    };
+  }
+
+  if (results) {
+    for (const result of results) {
+      if (!result.usage) {
+        await logger?.debug(`Provider ${result.provider} not configured, skipping`);
+        continue;
+      }
+
+      let usage = result.usage;
+
+      if (result.provider === 'google' && usage?.models) {
+        usage = {
+          ...usage,
+          models: filterFlagshipModels(usage.models),
+        };
+      }
+
+      const line = formatProviderLine(result.provider, usage);
+      lines.push(line);
+    }
+
+    if (lines.length === 0) {
+      return {
+        title: 'Usage',
+        message: 'No providers configured',
+        variant: 'info',
+      };
+    }
+
+    return {
+      title: 'Usage',
+      message: lines.join('\n'),
+      variant: 'info',
+    };
+  }
+
   return {
     title: 'Usage',
-    message: lines.join('\n'),
+    message: 'No providers configured',
     variant: 'info',
   };
 };

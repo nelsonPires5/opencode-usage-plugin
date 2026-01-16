@@ -1,4 +1,5 @@
-import type { ProviderResult, ProviderUsage, UsageWindow } from '../types/index.ts';
+import type { ProviderResult, UsageWindow } from '../types/index.ts';
+import type { DisplayCache } from '../cache/reader.ts';
 import type {
   DashboardData,
   DashboardProvider,
@@ -63,7 +64,21 @@ const formatWindow = (key: string, window: UsageWindow): DashboardWindow => {
   };
 };
 
-export const formatDashboardData = (results: ProviderResult[]): DashboardData => {
+export const formatDashboardData = (
+  input: ProviderResult[] | DisplayCache | null
+): DashboardData => {
+  if (input === null) {
+    return { providers: [] };
+  }
+
+  if (!('providers' in input)) {
+    return formatDashboardDataFromResults(input);
+  }
+
+  return formatDashboardDataFromCache(input);
+};
+
+const formatDashboardDataFromResults = (results: ProviderResult[]): DashboardData => {
   const providers: DashboardProvider[] = [];
 
   for (const result of results) {
@@ -74,7 +89,6 @@ export const formatDashboardData = (results: ProviderResult[]): DashboardData =>
     const sections: DashboardSection[] = [];
     let usage = result.usage;
 
-    // Handle flagship filtering for Google
     if (result.provider === 'google' && usage.models) {
       usage = {
         ...usage,
@@ -82,7 +96,6 @@ export const formatDashboardData = (results: ProviderResult[]): DashboardData =>
       };
     }
 
-    // 1. Global Windows (Overall Usage)
     const globalWindows = Object.entries(usage.windows);
     if (globalWindows.length > 0) {
       sections.push({
@@ -91,7 +104,6 @@ export const formatDashboardData = (results: ProviderResult[]): DashboardData =>
       });
     }
 
-    // 2. Per-Model Windows
     if (usage.models) {
       const modelSections: DashboardSection[] = [];
       for (const [modelName, modelUsage] of Object.entries(usage.models)) {
@@ -124,9 +136,75 @@ export const formatDashboardData = (results: ProviderResult[]): DashboardData =>
   return { providers };
 };
 
-export const formatDashboardString = (data: DashboardData): string => {
+const formatDashboardDataFromCache = (displayCache: DisplayCache): DashboardData => {
+  const providers: DashboardProvider[] = [];
+
+  for (const [providerId, entry] of Object.entries(displayCache.providers)) {
+    if (!entry.data) {
+      continue;
+    }
+
+    const sections: DashboardSection[] = [];
+    let usage = entry.data;
+
+    if (providerId === 'google' && usage.models) {
+      usage = {
+        ...usage,
+        models: filterFlagshipModels(usage.models),
+      };
+    }
+
+    const globalWindows = Object.entries(usage.windows);
+    if (globalWindows.length > 0) {
+      sections.push({
+        title: 'Overall Usage',
+        windows: globalWindows.map(([key, win]) => formatWindow(key, win)),
+      });
+    }
+
+    if (usage.models) {
+      const modelSections: DashboardSection[] = [];
+      for (const [modelName, modelUsage] of Object.entries(usage.models)) {
+        const modelWindowEntries = Object.entries(modelUsage.windows);
+        if (modelWindowEntries.length > 0) {
+          modelSections.push({
+            title: modelName,
+            windows: modelWindowEntries.map(([key, win]) => formatWindow(key, win)),
+          });
+        }
+      }
+
+      if (modelSections.length > 0) {
+        sections.push({
+          title: 'Model Usage',
+          windows: [],
+          sections: modelSections,
+        });
+      }
+    }
+
+    if (sections.length > 0) {
+      providers.push({
+        name: providerId.toUpperCase().replace(/-/g, ' '),
+        sections,
+      });
+    }
+  }
+
+  return { providers };
+};
+
+export const formatDashboardString = (
+  data: DashboardData,
+  updatedAt?: string,
+  isStale?: boolean
+): string => {
   if (data.providers.length === 0) {
-    return 'No usage data available';
+    let result = 'No usage data available';
+    if (updatedAt) {
+      result += `\n\nUpdated at: ${updatedAt}`;
+    }
+    return result;
   }
 
   const lines: string[] = [];
@@ -216,5 +294,15 @@ export const formatDashboardString = (data: DashboardData): string => {
     }
   }
 
-  return lines.join('\n').trim();
+  let result = lines.join('\n').trim();
+
+  if (updatedAt) {
+    result += `\n\nUpdated at: ${updatedAt}`;
+  }
+
+  if (isStale) {
+    result += ' (STALE)';
+  }
+
+  return result;
 };

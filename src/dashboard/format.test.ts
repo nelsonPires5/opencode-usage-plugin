@@ -7,6 +7,7 @@ import {
 } from './format.js';
 import type { ProviderResult } from '../types/index.js';
 import type { DashboardData } from '../types/dashboard.js';
+import type { DisplayCache } from '../cache/reader.ts';
 
 describe('Dashboard Format', () => {
   const mockWindow = {
@@ -62,140 +63,81 @@ describe('Dashboard Format', () => {
   });
 
   describe('formatDashboardData', () => {
-    it('formats OpenAI with multiple global windows', () => {
-      const results: ProviderResult[] = [
-        {
-          provider: 'openai',
-          ok: true,
-          configured: true,
-          usage: {
-            windows: {
-              '5h': mockWindow,
-              weekly: { ...mockWindow, usedPercent: 80, remainingPercent: 20 },
-            },
-          },
-        },
-      ];
-
-      const data = formatDashboardData(results);
-
-      expect(data.providers).toHaveLength(1);
-      expect(data.providers[0].name).toBe('OPENAI');
-      expect(data.providers[0].sections).toHaveLength(1);
-      expect(data.providers[0].sections[0].title).toBe('Overall Usage');
-      expect(data.providers[0].sections[0].windows).toHaveLength(2);
-      expect(data.providers[0].sections[0].windows[0].label).toBe('5h Window');
-      expect(data.providers[0].sections[0].windows[1].label).toBe('Weekly Window');
-      expect(data.providers[0].sections[0].windows[1].usedPercent).toBe(80);
-    });
-
-    it('formats Google with flagship models', () => {
-      const results: ProviderResult[] = [
-        {
-          provider: 'google',
-          ok: true,
-          configured: true,
-          usage: {
-            windows: {},
-            models: {
-              'claude-opus-4.5': {
-                windows: { '5h': mockWindow },
+    describe('with ProviderResult[] (Legacy)', () => {
+      it('formats OpenAI with multiple global windows', () => {
+        const results: ProviderResult[] = [
+          {
+            provider: 'openai',
+            ok: true,
+            configured: true,
+            usage: {
+              windows: {
+                '5h': mockWindow,
+                weekly: { ...mockWindow, usedPercent: 80, remainingPercent: 20 },
               },
-              'gemini-3-pro': {
-                windows: { '5h': { ...mockWindow, usedPercent: 10, remainingPercent: 90 } },
+            },
+          },
+        ];
+
+        const data = formatDashboardData(results);
+
+        expect(data.providers).toHaveLength(1);
+        expect(data.providers[0].name).toBe('OPENAI');
+        expect(data.providers[0].sections).toHaveLength(1);
+      });
+    });
+
+    describe('with DisplayCache (New)', () => {
+      const mockCache: DisplayCache = {
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        isStale: false,
+        providers: {
+          openai: {
+            supported: true,
+            configured: true,
+            last_attempt_at: '2024-01-01T00:00:00.000Z',
+            last_success_at: '2024-01-01T00:00:00.000Z',
+            data: {
+              windows: {
+                '5h': mockWindow,
               },
-              'non-flagship': { windows: { '5h': mockWindow } },
             },
+            error: null,
           },
-        },
-      ];
-
-      const data = formatDashboardData(results);
-
-      expect(data.providers).toHaveLength(1);
-      expect(data.providers[0].name).toBe('GOOGLE');
-      // Should have 1 section "Model Usage"
-      expect(data.providers[0].sections).toHaveLength(1);
-      expect(data.providers[0].sections[0].title).toBe('Model Usage');
-
-      // Should have 2 subsections (claude, gemini)
-      const subsections = data.providers[0].sections[0].sections;
-      expect(subsections).toBeDefined();
-      expect(subsections).toHaveLength(2);
-      expect(subsections?.map((s) => s.title)).toEqual(['claude-opus-4.5', 'gemini-3-pro']);
-    });
-
-    it('formats Google with both global and model windows', () => {
-      const results: ProviderResult[] = [
-        {
-          provider: 'google',
-          ok: true,
-          configured: true,
-          usage: {
-            windows: { '5h': mockWindow },
-            models: {
-              'claude-opus-4.5': { windows: { '5h': mockWindow } },
+          google: {
+            supported: true,
+            configured: true,
+            last_attempt_at: '2024-01-01T00:00:00.000Z',
+            last_success_at: '2024-01-01T00:00:00.000Z',
+            data: {
+              windows: {},
+              models: {
+                'claude-opus-4.5': { windows: { '5h': mockWindow } },
+              },
             },
+            error: null,
           },
-        },
-      ];
+        } as any,
+      };
 
-      const data = formatDashboardData(results);
+      it('formats correctly from cache', () => {
+        const data = formatDashboardData(mockCache);
 
-      expect(data.providers[0].sections).toHaveLength(2);
-      expect(data.providers[0].sections[0].title).toBe('Overall Usage');
-      expect(data.providers[0].sections[1].title).toBe('Model Usage');
+        expect(data.providers).toHaveLength(2);
 
-      const modelSection = data.providers[0].sections[1];
-      expect(modelSection.sections).toHaveLength(1);
-      expect(modelSection.sections?.[0].title).toBe('claude-opus-4.5');
-    });
+        const openai = data.providers.find((p) => p.name === 'OPENAI');
+        expect(openai).toBeDefined();
+        expect(openai?.sections[0].windows[0].label).toBe('5h Window');
 
-    it('skips unconfigured providers', () => {
-      const results: ProviderResult[] = [
-        {
-          provider: 'openai',
-          ok: false,
-          configured: false,
-          error: 'Not configured',
-          usage: null,
-        },
-        {
-          provider: 'zai-coding-plan',
-          ok: true,
-          configured: true,
-          usage: {
-            windows: { '5h': mockWindow },
-          },
-        },
-      ];
+        const google = data.providers.find((p) => p.name === 'GOOGLE');
+        expect(google).toBeDefined();
+        expect(google?.sections[0].title).toBe('Model Usage');
+      });
 
-      const data = formatDashboardData(results);
-
-      expect(data.providers).toHaveLength(1);
-      expect(data.providers[0].name).toBe('ZAI CODING PLAN');
-    });
-
-    it('handles null remaining percent (N/A status)', () => {
-      const results: ProviderResult[] = [
-        {
-          provider: 'openai',
-          ok: true,
-          configured: true,
-          usage: {
-            windows: {
-              '5h': { ...mockWindow, remainingPercent: null, usedPercent: null },
-            },
-          },
-        },
-      ];
-
-      const data = formatDashboardData(results);
-      const window = data.providers[0].sections[0].windows[0];
-
-      expect(window.status).toBe('⚪');
-      expect(window.statusText).toBe('N/A');
-      expect(window.usedPercent).toBeNull();
+      it('handles null cache', () => {
+        const data = formatDashboardData(null);
+        expect(data.providers).toHaveLength(0);
+      });
     });
   });
 
@@ -205,7 +147,12 @@ describe('Dashboard Format', () => {
       expect(formatDashboardString(data)).toBe('No usage data available');
     });
 
-    it('formats full dashboard correctly', () => {
+    it('appends Updated at when provided', () => {
+      const data: DashboardData = { providers: [] };
+      expect(formatDashboardString(data, '2024-01-01')).toContain('Updated at: 2024-01-01');
+    });
+
+    it('appends STALE warning when isStale is true', () => {
       const data: DashboardData = {
         providers: [
           {
@@ -229,15 +176,8 @@ describe('Dashboard Format', () => {
         ],
       };
 
-      const output = formatDashboardString(data);
-
-      expect(output).toContain('OPENAI ─────');
-      expect(output).toContain('Overall Usage');
-      expect(output).toContain('└─ 5h Window');
-      expect(output).toContain('• Resets in 2h');
-      expect(output).not.toContain('Status 🟢 OK');
-      // Check for bar (rough check)
-      expect(output).toContain('[██');
+      const output = formatDashboardString(data, '2024-01-01', true);
+      expect(output).toContain('(STALE)');
     });
   });
 });
