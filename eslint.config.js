@@ -37,6 +37,7 @@ export default tseslint.config(
       ...tseslint.configs.recommended.rules,
       ...prettier.rules,
       'prettier/prettier': 'error',
+      'no-unused-vars': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
       'no-console': 'error',
