@@ -1,4 +1,4 @@
-import type { ProviderResult, ProviderUsage, UsageWindow } from '../types/index.js';
+import type { ProviderResult, ProviderUsage, UsageWindow } from '../types/index.ts';
 import type {
   DashboardData,
   DashboardProvider,
@@ -6,8 +6,8 @@ import type {
   DashboardWindow,
   StatusEmoji,
   StatusText,
-} from '../types/dashboard.js';
-import { filterFlagshipModels } from '../toast/filter.js';
+} from '../types/dashboard.ts';
+import { filterFlagshipModels } from '../toast/filter.ts';
 
 const getStatus = (remainingPercent: number | null): { emoji: StatusEmoji; text: StatusText } => {
   if (remainingPercent === null) {
