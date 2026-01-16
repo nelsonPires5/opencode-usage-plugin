@@ -1,5 +1,12 @@
-import type { ProviderResult, ProviderUsage } from '../types/index.js';
-import type { TableRow, TableData, StatusEmoji, StatusText } from '../types/table.js';
+import type { ProviderResult, ProviderUsage, UsageWindow } from '../types/index.js';
+import type {
+  DashboardData,
+  DashboardProvider,
+  DashboardSection,
+  DashboardWindow,
+  StatusEmoji,
+  StatusText,
+} from '../types/dashboard.js';
 import { filterFlagshipModels } from '../toast/filter.js';
 
 const getStatus = (remainingPercent: number | null): { emoji: StatusEmoji; text: StatusText } => {
@@ -18,127 +25,151 @@ const getStatus = (remainingPercent: number | null): { emoji: StatusEmoji; text:
   return { emoji: '🟢', text: 'OK' };
 };
 
-const formatProviderWindow = (
-  provider: string,
-  model: string | null,
-  usage: ProviderUsage
-): TableRow | null => {
-  let window = null;
+export const formatWindowLabel = (key: string): string => {
+  switch (key) {
+    case '5h':
+      return '5h Window';
+    case 'weekly':
+      return 'Weekly Window';
+    default:
+      return `${key} Window`;
+  }
+};
 
-  const globalWindows = Object.values(usage.windows);
-  if (globalWindows.length > 0) {
-    window = globalWindows[0];
-  } else if (usage.models && model) {
-    const modelWindows = usage.models[model];
-    if (modelWindows) {
-      const modelWindowEntries = Object.values(modelWindows.windows);
-      if (modelWindowEntries.length > 0) {
-        window = modelWindowEntries[0];
-      }
-    }
+export const renderBar = (percent: number | null, width: number = 20): string => {
+  if (percent === null) {
+    return `[${'░'.repeat(width)}]`;
   }
 
-  if (!window) {
-    return null;
-  }
+  // Clamp percent between 0 and 100
+  const validPercent = Math.max(0, Math.min(100, percent));
+  const filledLength = Math.round((validPercent / 100) * width);
+  const emptyLength = width - filledLength;
 
-  const usedPercent = window.usedPercent ?? null;
+  return `[${'█'.repeat(filledLength)}${'░'.repeat(emptyLength)}]`;
+};
+
+const formatWindow = (key: string, window: UsageWindow): DashboardWindow => {
   const remainingPercent = window.remainingPercent ?? null;
-  const resetsIn = window.resetAfterFormatted ?? 'N/A';
   const { emoji, text } = getStatus(remainingPercent);
 
   return {
-    provider,
-    model: model ?? '-',
-    usedPercent,
+    label: formatWindowLabel(key),
+    usedPercent: window.usedPercent ?? null,
     remainingPercent,
     status: emoji,
     statusText: text,
-    resetsIn,
+    resetsIn: window.resetAfterFormatted ?? 'N/A',
   };
 };
 
-const formatProviderRows = (result: ProviderResult): TableRow[] => {
-  if (!result.usage) {
-    return [];
-  }
-
-  let usage = result.usage;
-
-  if (result.provider === 'google' && usage?.models) {
-    usage = {
-      ...usage,
-      models: filterFlagshipModels(usage.models),
-    };
-  }
-
-  const globalWindows = Object.values(usage.windows);
-  const hasGlobalWindow = globalWindows.length > 0;
-  const models = usage.models ? Object.keys(usage.models) : [];
-
-  if (hasGlobalWindow) {
-    const row = formatProviderWindow(result.provider, null, usage);
-    return row ? [row] : [];
-  }
-
-  if (models.length > 0) {
-    const rows: TableRow[] = [];
-    for (const modelName of models) {
-      const row = formatProviderWindow(result.provider, modelName, usage);
-      if (row) {
-        rows.push(row);
-      }
-    }
-    return rows;
-  }
-
-  return [];
-};
-
-const formatTableCell = (
-  text: string | number | null,
-  width: number,
-  align: 'left' | 'right' = 'left'
-): string => {
-  const str = String(text ?? 'N/A');
-  if (align === 'right') {
-    return str.padStart(width, ' ');
-  }
-  return str.padEnd(width, ' ');
-};
-
-export const formatUsageTable = (results: ProviderResult[]): TableData => {
-  const rows: TableRow[] = [];
+export const formatDashboardData = (results: ProviderResult[]): DashboardData => {
+  const providers: DashboardProvider[] = [];
 
   for (const result of results) {
-    const providerRows = formatProviderRows(result);
-    rows.push(...providerRows);
+    if (!result.usage) {
+      continue;
+    }
+
+    const sections: DashboardSection[] = [];
+    let usage = result.usage;
+
+    // Handle flagship filtering for Google
+    if (result.provider === 'google' && usage.models) {
+      usage = {
+        ...usage,
+        models: filterFlagshipModels(usage.models),
+      };
+    }
+
+    // 1. Global Windows (Overall Usage)
+    const globalWindows = Object.entries(usage.windows);
+    if (globalWindows.length > 0) {
+      sections.push({
+        title: 'Overall Usage',
+        windows: globalWindows.map(([key, win]) => formatWindow(key, win)),
+      });
+    }
+
+    // 2. Per-Model Windows
+    if (usage.models) {
+      for (const [modelName, modelUsage] of Object.entries(usage.models)) {
+        const modelWindowEntries = Object.entries(modelUsage.windows);
+        if (modelWindowEntries.length > 0) {
+          sections.push({
+            title: modelName,
+            windows: modelWindowEntries.map(([key, win]) => formatWindow(key, win)),
+          });
+        }
+      }
+    }
+
+    if (sections.length > 0) {
+      providers.push({
+        name: result.provider.toUpperCase().replace(/-/g, ' '),
+        sections,
+      });
+    }
   }
 
-  return { rows };
+  return { providers };
 };
 
-export const formatTableString = (tableData: TableData): string => {
-  if (tableData.rows.length === 0) {
+export const formatDashboardString = (data: DashboardData): string => {
+  if (data.providers.length === 0) {
     return 'No usage data available';
   }
 
-  const colWidths = {
-    provider: 16,
-    model: 18,
-    used: 6,
-    remaining: 11,
-    status: 8,
-    resets: 12,
-  };
+  const lines: string[] = [];
+  const HEADER_WIDTH = 65; // Adjust as needed to match 70 chars total roughly
 
-  const header = `| ${formatTableCell('Provider', colWidths.provider)} | ${formatTableCell('Model', colWidths.model)} | ${formatTableCell('Used', colWidths.used, 'right')} | ${formatTableCell('Remaining', colWidths.remaining, 'right')} | ${formatTableCell('Status', colWidths.status)} | ${formatTableCell('Resets In', colWidths.resets)} |`;
+  for (const provider of data.providers) {
+    // Header: PROVIDER ─────────────
+    // Calculate padding for dash line
+    const providerName = provider.name;
+    const dashCount = Math.max(0, HEADER_WIDTH - providerName.length - 1);
+    lines.push(`${providerName} ${'─'.repeat(dashCount)}`);
 
-  const separator = `|${'-'.repeat(colWidths.provider + 2)}|${'-'.repeat(colWidths.model + 2)}|${'-'.repeat(colWidths.used + 2)}|${'-'.repeat(colWidths.remaining + 2)}|${'-'.repeat(colWidths.status + 2)}|${'-'.repeat(colWidths.resets + 2)}|`;
+    for (let i = 0; i < provider.sections.length; i++) {
+      const section = provider.sections[i];
+      // Section title (e.g., Overall Usage or model name)
+      lines.push(section.title);
 
-  const rows = tableData.rows.map((row) => {
-    return `| ${formatTableCell(row.provider, colWidths.provider)} | ${formatTableCell(row.model, colWidths.model)} | ${formatTableCell(row.usedPercent !== null ? `${row.usedPercent}%` : null, colWidths.used, 'right')} | ${formatTableCell(row.remainingPercent !== null ? `${row.remainingPercent}%` : null, colWidths.remaining, 'right')} | ${formatTableCell(row.status, colWidths.status)} | ${formatTableCell(row.resetsIn, colWidths.resets)} |`;
-  });
+      for (let j = 0; j < section.windows.length; j++) {
+        const window = section.windows[j];
+        const isLastWindow = j === section.windows.length - 1;
 
-  return [header, separator, ...rows].join('\n');
+        const branch = isLastWindow ? '└─' : '├─';
+        const pipe = isLastWindow ? '  ' : '│ ';
+
+        // Line 1: Label
+        // Example: └─ 5h Window
+        lines.push(`  ${branch} ${window.label}`);
+
+        // Line 2: Progress Bar + Percent
+        // Example:    [████░░░░] 45%
+        const percentStr =
+          window.usedPercent !== null ? `${Math.round(window.usedPercent)}%` : 'N/A';
+        lines.push(`  ${pipe} ${renderBar(window.usedPercent)}  ${percentStr}`);
+
+        // Line 3: Status
+        // Example:    Status 🟢 OK • Resets in 2h 15m
+        lines.push(
+          `  ${pipe} Status ${window.status} ${window.statusText} • Resets in ${window.resetsIn}`
+        );
+
+        // Spacer line unless it's the very last window of the section
+        if (!isLastWindow) {
+          lines.push(`  ${pipe}`);
+        }
+      }
+
+      // Add empty line after section (unless it's the last section of the provider? maybe)
+      lines.push('');
+    }
+    // Add empty line between providers
+    // (Already added one after last section, so maybe check logic)
+  }
+
+  return lines.join('\n').trim();
 };
