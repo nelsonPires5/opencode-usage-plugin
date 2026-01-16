@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { formatUsageTable, formatTableString } from './format.js';
+import {
+  formatDashboardData,
+  formatDashboardString,
+  renderBar,
+  formatWindowLabel,
+} from './format.js';
 import type { ProviderResult } from '../types/index.js';
-import type { TableData, StatusEmoji } from '../types/table.js';
+import type { DashboardData } from '../types/dashboard.js';
 
-describe('Table Format', () => {
+describe('Dashboard Format', () => {
   const mockWindow = {
     usedPercent: 45,
     remainingPercent: 55,
@@ -14,86 +19,77 @@ describe('Table Format', () => {
     resetAfterFormatted: '2h',
   };
 
-  describe('formatUsageTable', () => {
-    it('formats OpenAI global window', () => {
+  describe('Utilities', () => {
+    describe('renderBar', () => {
+      it('renders empty bar for null percent', () => {
+        expect(renderBar(null, 10)).toBe('[░░░░░░░░░░]');
+      });
+
+      it('renders 0% bar', () => {
+        expect(renderBar(0, 10)).toBe('[░░░░░░░░░░]');
+      });
+
+      it('renders 50% bar', () => {
+        expect(renderBar(50, 10)).toBe('[█████░░░░░]');
+      });
+
+      it('renders 100% bar', () => {
+        expect(renderBar(100, 10)).toBe('[██████████]');
+      });
+
+      it('clamps negative values to 0%', () => {
+        expect(renderBar(-10, 10)).toBe('[░░░░░░░░░░]');
+      });
+
+      it('clamps values > 100 to 100%', () => {
+        expect(renderBar(150, 10)).toBe('[██████████]');
+      });
+    });
+
+    describe('formatWindowLabel', () => {
+      it('formats 5h', () => {
+        expect(formatWindowLabel('5h')).toBe('5h Window');
+      });
+
+      it('formats weekly', () => {
+        expect(formatWindowLabel('weekly')).toBe('Weekly Window');
+      });
+
+      it('formats unknown keys', () => {
+        expect(formatWindowLabel('custom')).toBe('custom Window');
+      });
+    });
+  });
+
+  describe('formatDashboardData', () => {
+    it('formats OpenAI with multiple global windows', () => {
       const results: ProviderResult[] = [
         {
           provider: 'openai',
           ok: true,
           configured: true,
           usage: {
-            windows: { '5h': mockWindow },
+            windows: {
+              '5h': mockWindow,
+              weekly: { ...mockWindow, usedPercent: 80, remainingPercent: 20 },
+            },
           },
         },
       ];
 
-      const table = formatUsageTable(results);
+      const data = formatDashboardData(results);
 
-      expect(table.rows).toHaveLength(1);
-      expect(table.rows[0].provider).toBe('openai');
-      expect(table.rows[0].model).toBe('-');
-      expect(table.rows[0].usedPercent).toBe(45);
-      expect(table.rows[0].remainingPercent).toBe(55);
-      expect(table.rows[0].status).toBe('🟢');
-      expect(table.rows[0].statusText).toBe('OK');
-      expect(table.rows[0].resetsIn).toBe('2h');
+      expect(data.providers).toHaveLength(1);
+      expect(data.providers[0].name).toBe('OPENAI');
+      expect(data.providers[0].sections).toHaveLength(1);
+      expect(data.providers[0].sections[0].title).toBe('Overall Usage');
+      expect(data.providers[0].sections[0].windows).toHaveLength(2);
+      expect(data.providers[0].sections[0].windows[0].label).toBe('5h Window');
+      expect(data.providers[0].sections[0].windows[1].label).toBe('Weekly Window');
+      expect(data.providers[0].sections[0].windows[1].usedPercent).toBe(80);
     });
 
-    it('assigns critical status when remaining < 10%', () => {
-      const results: ProviderResult[] = [
-        {
-          provider: 'openai',
-          ok: true,
-          configured: true,
-          usage: {
-            windows: { '5h': { ...mockWindow, remainingPercent: 5, usedPercent: 95 } },
-          },
-        },
-      ];
-
-      const table = formatUsageTable(results);
-
-      expect(table.rows[0].status).toBe('🔴');
-      expect(table.rows[0].statusText).toBe('Critical');
-    });
-
-    it('assigns warning status when remaining < 30%', () => {
-      const results: ProviderResult[] = [
-        {
-          provider: 'openai',
-          ok: true,
-          configured: true,
-          usage: {
-            windows: { '5h': { ...mockWindow, remainingPercent: 22, usedPercent: 78 } },
-          },
-        },
-      ];
-
-      const table = formatUsageTable(results);
-
-      expect(table.rows[0].status).toBe('🟡');
-      expect(table.rows[0].statusText).toBe('Warning');
-    });
-
-    it('assigns OK status when remaining >= 30%', () => {
-      const results: ProviderResult[] = [
-        {
-          provider: 'openai',
-          ok: true,
-          configured: true,
-          usage: {
-            windows: { '5h': { ...mockWindow, remainingPercent: 35, usedPercent: 65 } },
-          },
-        },
-      ];
-
-      const table = formatUsageTable(results);
-
-      expect(table.rows[0].status).toBe('🟢');
-      expect(table.rows[0].statusText).toBe('OK');
-    });
-
-    it('formats Google with flagship models filtered (multiple rows)', () => {
+    it('formats Google with flagship models', () => {
       const results: ProviderResult[] = [
         {
           provider: 'google',
@@ -103,95 +99,48 @@ describe('Table Format', () => {
             windows: {},
             models: {
               'claude-opus-4.5': {
-                windows: { '5h': { ...mockWindow, usedPercent: 45, remainingPercent: 55 } },
+                windows: { '5h': mockWindow },
               },
-              'claude-sonnet-4.5': { windows: { '5h': mockWindow } },
               'gemini-3-pro': {
-                windows: { '5h': { ...mockWindow, usedPercent: 78, remainingPercent: 22 } },
+                windows: { '5h': { ...mockWindow, usedPercent: 10, remainingPercent: 90 } },
               },
-              'gemini-2.5': { windows: { '5h': mockWindow } },
+              'non-flagship': { windows: { '5h': mockWindow } },
             },
           },
         },
       ];
 
-      const table = formatUsageTable(results);
+      const data = formatDashboardData(results);
 
-      expect(table.rows).toHaveLength(2);
-      expect(table.rows[0].provider).toBe('google');
-      expect(table.rows[0].model).toBe('claude-opus-4.5');
-      expect(table.rows[0].usedPercent).toBe(45);
-      expect(table.rows[0].remainingPercent).toBe(55);
-      expect(table.rows[0].status).toBe('🟢');
-      expect(table.rows[1].provider).toBe('google');
-      expect(table.rows[1].model).toBe('gemini-3-pro');
-      expect(table.rows[1].usedPercent).toBe(78);
-      expect(table.rows[1].remainingPercent).toBe(22);
-      expect(table.rows[1].status).toBe('🟡');
+      expect(data.providers).toHaveLength(1);
+      expect(data.providers[0].name).toBe('GOOGLE');
+      expect(data.providers[0].sections).toHaveLength(2);
+      expect(data.providers[0].sections.map((s) => s.title)).toEqual([
+        'claude-opus-4.5',
+        'gemini-3-pro',
+      ]);
     });
 
-    it('formats z.ai with token window', () => {
+    it('formats Google with both global and model windows', () => {
       const results: ProviderResult[] = [
-        {
-          provider: 'zai-coding-plan',
-          ok: true,
-          configured: true,
-          usage: {
-            windows: { '5h': mockWindow },
-          },
-        },
-      ];
-
-      const table = formatUsageTable(results);
-
-      expect(table.rows).toHaveLength(1);
-      expect(table.rows[0].provider).toBe('zai-coding-plan');
-      expect(table.rows[0].model).toBe('-');
-      expect(table.rows[0].usedPercent).toBe(45);
-      expect(table.rows[0].remainingPercent).toBe(55);
-      expect(table.rows[0].resetsIn).toBe('2h');
-    });
-
-    it('handles multiple providers with different statuses', () => {
-      const results: ProviderResult[] = [
-        {
-          provider: 'openai',
-          ok: true,
-          configured: true,
-          usage: {
-            windows: { '5h': { ...mockWindow, remainingPercent: 55, usedPercent: 45 } },
-          },
-        },
         {
           provider: 'google',
           ok: true,
           configured: true,
           usage: {
-            windows: { '5h': { ...mockWindow, remainingPercent: 22, usedPercent: 78 } },
+            windows: { '5h': mockWindow },
             models: {
-              'gemini-3-pro': { windows: { '5h': mockWindow } },
+              'claude-opus-4.5': { windows: { '5h': mockWindow } },
             },
-          },
-        },
-        {
-          provider: 'zai-coding-plan',
-          ok: true,
-          configured: true,
-          usage: {
-            windows: { '5h': { ...mockWindow, remainingPercent: 5, usedPercent: 95 } },
           },
         },
       ];
 
-      const table = formatUsageTable(results);
+      const data = formatDashboardData(results);
 
-      expect(table.rows).toHaveLength(3);
-      expect(table.rows[0].provider).toBe('openai');
-      expect(table.rows[0].status).toBe('🟢');
-      expect(table.rows[1].provider).toBe('google');
-      expect(table.rows[1].status).toBe('🟡');
-      expect(table.rows[2].provider).toBe('zai-coding-plan');
-      expect(table.rows[2].status).toBe('🔴');
+      expect(data.providers[0].sections).toHaveLength(2);
+      expect(data.providers[0].sections[0].title).toBe('Overall Usage');
+      expect(data.providers[0].sections[1].title).toBe('claude-opus-4.5');
     });
 
     it('skips unconfigured providers', () => {
@@ -204,133 +153,82 @@ describe('Table Format', () => {
           usage: null,
         },
         {
-          provider: 'google',
+          provider: 'zai-coding-plan',
           ok: true,
           configured: true,
           usage: {
-            windows: {},
-            models: {
-              'claude-opus-4.5': { windows: { '5h': mockWindow } },
+            windows: { '5h': mockWindow },
+          },
+        },
+      ];
+
+      const data = formatDashboardData(results);
+
+      expect(data.providers).toHaveLength(1);
+      expect(data.providers[0].name).toBe('ZAI CODING PLAN');
+    });
+
+    it('handles null remaining percent (N/A status)', () => {
+      const results: ProviderResult[] = [
+        {
+          provider: 'openai',
+          ok: true,
+          configured: true,
+          usage: {
+            windows: {
+              '5h': { ...mockWindow, remainingPercent: null, usedPercent: null },
             },
           },
         },
       ];
 
-      const table = formatUsageTable(results);
+      const data = formatDashboardData(results);
+      const window = data.providers[0].sections[0].windows[0];
 
-      expect(table.rows).toHaveLength(1);
-      expect(table.rows[0].provider).toBe('google');
-      expect(table.rows[0].status).toBe('🟢');
-    });
-
-    it('handles empty usage data', () => {
-      const results: ProviderResult[] = [
-        {
-          provider: 'openai',
-          ok: true,
-          configured: true,
-          usage: { windows: {} },
-        },
-      ];
-
-      const table = formatUsageTable(results);
-
-      expect(table.rows).toHaveLength(0);
-    });
-
-    it('handles null remaining percent', () => {
-      const results: ProviderResult[] = [
-        {
-          provider: 'openai',
-          ok: true,
-          configured: true,
-          usage: {
-            windows: { '5h': { ...mockWindow, remainingPercent: null, usedPercent: null } },
-          },
-        },
-      ];
-
-      const table = formatUsageTable(results);
-
-      expect(table.rows[0].status).toBe('⚪');
-      expect(table.rows[0].statusText).toBe('N/A');
-    });
-
-    it('returns empty rows when no results', () => {
-      const results: ProviderResult[] = [];
-
-      const table = formatUsageTable(results);
-
-      expect(table.rows).toHaveLength(0);
+      expect(window.status).toBe('⚪');
+      expect(window.statusText).toBe('N/A');
+      expect(window.usedPercent).toBeNull();
     });
   });
 
-  describe('formatTableString', () => {
-    it('shows N/A for null values', () => {
-      const tableData: TableData = {
-        rows: [
+  describe('formatDashboardString', () => {
+    it('returns message when no data', () => {
+      const data: DashboardData = { providers: [] };
+      expect(formatDashboardString(data)).toBe('No usage data available');
+    });
+
+    it('formats full dashboard correctly', () => {
+      const data: DashboardData = {
+        providers: [
           {
-            provider: 'openai',
-            model: '-',
-            usedPercent: null,
-            remainingPercent: null,
-            status: '⚪' as StatusEmoji,
-            statusText: 'N/A',
-            resetsIn: 'N/A',
+            name: 'OPENAI',
+            sections: [
+              {
+                title: 'Overall Usage',
+                windows: [
+                  {
+                    label: '5h Window',
+                    usedPercent: 45,
+                    remainingPercent: 55,
+                    status: '🟢',
+                    statusText: 'OK',
+                    resetsIn: '2h',
+                  },
+                ],
+              },
+            ],
           },
         ],
       };
 
-      const result = formatTableString(tableData);
+      const output = formatDashboardString(data);
 
-      expect(result).toContain('N/A');
-    });
-
-    it('returns message when no rows', () => {
-      const tableData = { rows: [] };
-
-      const result = formatTableString(tableData);
-
-      expect(result).toBe('No usage data available');
-    });
-
-    it('formats multiple rows with different providers', () => {
-      const tableData: TableData = {
-        rows: [
-          {
-            provider: 'openai',
-            model: '-',
-            usedPercent: 0,
-            remainingPercent: 100,
-            status: '🟢' as StatusEmoji,
-            statusText: 'OK',
-            resetsIn: '5h',
-          },
-          {
-            provider: 'google',
-            model: 'claude-opus-4.5',
-            usedPercent: 45,
-            remainingPercent: 55,
-            status: '🟢' as StatusEmoji,
-            statusText: 'OK',
-            resetsIn: '4d 15h',
-          },
-        ],
-      };
-
-      const result = formatTableString(tableData);
-
-      expect(result).toMatch(/openai/);
-      expect(result).toContain('0%');
-      expect(result).toContain('100%');
-      expect(result).toContain('🟢');
-      expect(result).toContain('5h');
-      expect(result).toMatch(/google/);
-      expect(result).toContain('claude-opus-4.5');
-      expect(result).toContain('45%');
-      expect(result).toContain('55%');
-      expect(result).toContain('🟢');
-      expect(result).toContain('4d 15h');
+      expect(output).toContain('OPENAI ─────');
+      expect(output).toContain('Overall Usage');
+      expect(output).toContain('└─ 5h Window');
+      expect(output).toContain('Status 🟢 OK • Resets in 2h');
+      // Check for bar (rough check)
+      expect(output).toContain('[██');
     });
   });
 });
