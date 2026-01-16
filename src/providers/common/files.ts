@@ -11,6 +11,8 @@ export const xdgDataHome = (): string =>
 export const xdgConfigHome = (): string =>
   process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config');
 
+export const xdgCacheHome = (): string => process.env.XDG_CACHE_HOME ?? join(homedir(), '.cache');
+
 export const AUTH_PATHS = {
   opencode: (): string => join(xdgDataHome(), 'opencode', 'auth.json'),
   openaiPlugin: (): string => join(homedir(), '.opencode', 'auth', 'openai.json'),
