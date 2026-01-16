@@ -5,8 +5,8 @@ import { fetchGoogleUsage } from './providers/google/fetch.ts';
 import { fetchOpenaiUsage } from './providers/openai/fetch.ts';
 import { fetchZaiUsage } from './providers/zai-coding-plan/fetch.ts';
 import { PROVIDERS, type ProviderId, type ProviderResult } from './types/index.ts';
-import { formatDashboardData, formatDashboardString } from './dashboard/format.js';
-import { formatUsageToast } from './toast/format.js';
+import { formatDashboardData, formatDashboardString } from './dashboard/format.ts';
+import { formatUsageToast } from './toast/format.ts';
 
 const fetchUsage = async (provider: ProviderId, logger: Logger): Promise<ProviderResult> => {
   switch (provider) {
