@@ -5,7 +5,7 @@ import { fetchGoogleUsage } from './providers/google/fetch.ts';
 import { fetchOpenaiUsage } from './providers/openai/fetch.ts';
 import { fetchZaiUsage } from './providers/zai-coding-plan/fetch.ts';
 import { PROVIDERS, type ProviderId, type ProviderResult } from './types/index.ts';
-import { formatUsageTable, formatTableString } from './table/format.js';
+import { formatDashboardData, formatDashboardString } from './table/format.js';
 import { formatUsageToast } from './toast/format.js';
 
 const fetchUsage = async (provider: ProviderId, logger: Logger): Promise<ProviderResult> => {
@@ -53,9 +53,9 @@ export const UsagePlugin: Plugin = async ({ client }) => {
 
       const results = await Promise.all(PROVIDERS.map((provider) => fetchUsage(provider, logger)));
 
-      const tableData = formatUsageTable(results);
+      const dashboardData = formatDashboardData(results);
 
-      return formatTableString(tableData);
+      return formatDashboardString(dashboardData);
     },
   });
 
